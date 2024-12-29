@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Игра "Сапёр"</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+
+      .board {
+        display: inline-block;
+        border: 1px solid #999;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+      }
+
+      .cell {
+        width: 30px;
+        height: 30px;
+        text-align: center;
+        vertical-align: middle;
+        border: 1px solid #ccc;
+        cursor: pointer;
+      }
+
+      .mine {
+        background-color: #f00;
+      }
+
+      .empty {
+        background-color: #ddd;
+      }
+
+      .number {
+        background-color: #eee;
+      }
+
+      .flagged {
+        background-color: #ff0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Игра "Сапёр"</h1>
+    <div id="game"></div>
+
+    <script>
+      function createBoard(size, minePercentage) {
+        const gameContainer = document.getElementById("game");
+        const board = document.createElement("table");
+        board.className = "board";
+
+        const cells = [];
+        const flags = [];
+        let openedCells = 0;
+        let remainingCells =
+          size * size - Math.floor((size * size * minePercentage) / 100);
+        let gameFinished = false;
+
+        for (let i = 0; i < size; i++) {
+          const row = document.createElement("tr");
+          const cellRow = [];
+          const flagRow = [];
+
+          for (let j = 0; j < size; j++) {
+            const cell = document.createElement("td");
+            cell.className = "cell";
+            cell.addEventListener("click", () => openCell(i, j));
+            cell.addEventListener("contextmenu", (e) => {
+              e.preventDefault();
+              toggleFlag(i, j);
+            });
+
+            row.appendChild(cell);
+            cellRow.push(cell);
+            flagRow.push(false);
+          }
+
+          board.appendChild(row);
+          cells.push(cellRow);
+          flags.push(flagRow);
+        }
+
+        gameContainer.appendChild(board);
+
+        let minesPlaced = 0;
+        while (minesPlaced < (remainingCells * minePercentage) / 100) {
+          const randomRow = Math.floor(Math.random() * size);
+          const randomCol = Math.floor(Math.random() * size);
+
+          if (!cells[randomRow][randomCol].classList.contains("mine")) {
+            cells[randomRow][randomCol].classList.add("mine");
+            minesPlaced++;
+          }
+        }
+
+        function openCell(row, col) {
+          if (gameFinished) {
+            return;
+          }
+
+          const cell = cells[row][col];
+
+          if (cell.classList.contains("flagged")) {
+            return;
+          }
+
+          if (cell.classList.contains("opened")) {
+            return;
+          }
+
+          cell.classList.add("opened");
+          openedCells++;
+
+          if (cell.classList.contains("mine")) {
+            revealMines();
+            alert("Вы проиграли!");
+            gameFinished = true;
+          } else if (openedCells === remainingCells) {
+            revealMines();
+            alert("Вы выиграли!");
+            gameFinished = true;
+          } else if (cell.classList.contains("empty")) {
+            const emptyCells = getAdjacentEmptyCells(row, col);
+            for (let i = 0; i < emptyCells.length; i++) {
+              const adjacentRow = emptyCells[i][0];
+              const adjacentCol = emptyCells[i][1];
+              openCell(adjacentRow, adjacentCol);
+            }
+          } else {
+            const mineCount = getAdjacentMineCount(row, col);
+            if (mineCount > 0) {
+              cell.textContent = mineCount;
+              cell.classList.add("number");
+            }
+          }
+        }
+
+        function toggleFlag(row, col) {
+          if (gameFinished) {
+            return;
+          }
+
+          const cell = cells[row][col];
+
+          if (cell.classList.contains("opened")) {
+            return;
+          }
+
+          if (cell.classList.contains("flagged")) {
+            cell.classList.remove("flagged");
+            cell.textContent = "";
+            flags[row][col] = false;
+          } else {
+            cell.classList.add("flagged");
+            cell.textContent = "🚩";
+            flags[row][col] = true;
+          }
+        }
+
+        function revealMines() {
+          for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+              if (cells[i][j].classList.contains("mine")) {
+                cells[i][j].classList.add("opened");
+              }
+            }
+          }
+        }
+
+        function getAdjacentEmptyCells(row, col) {
+          const adjacentEmptyCells = [];
+
+          for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
+              const adjacentRow = row + i;
+              const adjacentCol = col + j;
+
+              if (
+                adjacentRow >= 0 &&
+                adjacentRow < size &&
+                adjacentCol >= 0 &&
+                adjacentCol < size &&
+                !(i === 0 && j === 0)
+              ) {
+                const adjacentCell = cells[adjacentRow][adjacentCol];
+                if (
+                  !adjacentCell.classList.contains("opened") &&
+                  !adjacentCell.classList.contains("flagged")
+                ) {
+                  adjacentEmptyCells.push([adjacentRow, adjacentCol]);
+                }
+              }
+            }
+          }
+
+          return adjacentEmptyCells;
+        }
+
+        function getAdjacentMineCount(row, col) {
+          let count = 0;
+
+          for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
+              const adjacentRow = row + i;
+              const adjacentCol = col + j;
+
+              if (
+                adjacentRow >= 0 &&
+                adjacentRow < size &&
+                adjacentCol >= 0 &&
+                adjacentCol < size &&
+                !(i === 0 && j === 0)
+              ) {
+                if (
+                  cells[adjacentRow][adjacentCol].classList.contains("mine")
+                ) {
+                  count++;
+                }
+              }
+            }
+          }
+
+          return count;
+        }
+      }
+
+      createBoard(10, 25);
+    </script>
+  </body>
+</html>
